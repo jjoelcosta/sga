@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Portaria – Consulta de Acesso</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;margin:24px;color:#111}
+    .container{max-width:1000px;margin:0 auto}
+    h1{font-size:22px;margin:0 0 12px}
+    form{display:flex;gap:8px;margin-bottom:16px}
+    input[type="text"]{flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px}
+    button{padding:10px 16px;border:0;background:#0d6efd;color:#fff;border-radius:8px;cursor:pointer}
+    button:hover{opacity:.9}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:14px;vertical-align:top}
+    th{background:#fafafa}
+    .ok{background:#e7f6ec;color:#0f6b2b;border:1px solid #b7e2c4;padding:2px 8px;border-radius:999px;font-size:12px}
+    .nok{background:#fdecec;color:#a01313;border:1px solid #f6c9c9;padding:2px 8px;border-radius:999px;font-size:12px}
+    .muted{color:#666}
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Portaria – Consulta de Acesso</h1>
+
+  <form method="get" action="">
+    <input type="text" name="q" placeholder="Digite CPF, Placa ou Nome" value="{{ termo|default:'' }}">
+    <button type="submit">Buscar</button>
+  </form>
+
+  {% if termo %}
+    <p class="muted">Resultado para: <strong>{{ termo }}</strong></p>
+  {% endif %}
+
+  {% if resultados %}
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Colaborador</th>
+          <th>CPF</th>
+          <th>Empresa</th>
+          <th>Função</th>
+          <th>Placa</th>
+          <th>Local / Atribuição</th>
+          <th>Início</th>
+          <th>Fim</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in resultados %}
+        <tr>
+          <td>
+            {% if r.acesso_liberado %}
+              <span class="ok">LIBERADO</span>
+            {% else %}
+              <span class="nok">BLOQUEADO</span>
+            {% endif %}
+          </td>
+          <td>{{ r.colaborador.nome }}</td>
+          <td>{{ r.colaborador.cpf }}</td>
+          <td>{{ r.colaborador.empresa.nome }}</td>
+          <td>{{ r.colaborador.funcao }}</td>
+          <td>
+            {% if r.veiculo %}
+              {{ r.veiculo.placa }}
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ r.atribuicao_local|default:"—" }}</td>
+          <td>
+            {% if r.data_acesso_inicio %}
+              {{ r.data_acesso_inicio|date:"Y-m-d H:i" }}
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if r.data_acesso_fim %}
+              {{ r.data_acesso_fim|date:"Y-m-d H:i" }}
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    {% if termo %}
+      <p><strong>Nenhum registro encontrado.</strong></p>
+    {% else %}
+      <p class="muted">Digite um CPF, placa ou nome para consultar.</p>
+    {% endif %}
+  {% endif %}
+
+</div>
+</body>
+</html>
+
