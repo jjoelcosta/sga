@@ -1,8 +1,6 @@
 from django.urls import path
-from . import views
-
-app_name = "core"
+from .views import portaria_busca
 
 urlpatterns = [
-    path("portaria/", views.portaria_busca, name="portaria_busca"),
+    path("portaria/", portaria_busca, name="portaria"),
 ]
