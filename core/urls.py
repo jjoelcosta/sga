@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import portaria_busca
+from . import views
 
 urlpatterns = [
-    path("portaria/", portaria_busca, name="portaria"),
+    path("portaria/", views.portaria_busca, name="portaria_busca"),
 ]
