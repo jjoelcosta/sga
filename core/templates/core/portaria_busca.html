@@ -1,49 +1,109 @@
-{% extends "base.html" %}
-{% block title %}Consulta de Portaria{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Portaria – Consulta de Acesso</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap básico via CDN (ok para dev) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    .badge-status { font-size: 0.9rem; }
+    .badge-LIBERADO { background:#198754; }   /* verde */
+    .badge-PENDENTE { background:#6c757d; }   /* cinza */
+    .badge-BLOQUEADO{ background:#dc3545; }   /* vermelho */
+    .card + .card { margin-top: .5rem; }
+    .muted { color:#6c757d; }
+  </style>
+</head>
+<body class="bg-light">
+<div class="container py-4">
+  <h1 class="mb-3">Portaria – Consulta de Acesso</h1>
 
-{% block content %}
-<div class="container mt-5">
-  <h2 class="text-center mb-4">Consulta de Acesso - Portaria</h2>
+  <form class="row g-2 align-items-end mb-4" method="get" action=".">
+    <div class="col-12 col-md-4">
+      <label class="form-label">CPF, Placa ou Nome</label>
+      <input type="text" name="q" value="{{ termo }}" class="form-control" placeholder="Ex.: 12345678901, ABC1D23, Maria">
+    </div>
 
-  <form method="get" action="{% url 'portaria_busca' %}" class="d-flex justify-content-center mb-4">
-    <input type="text" name="q" class="form-control w-50" placeholder="Digite CPF, nome ou placa" value="{{ termo }}">
-    <button type="submit" class="btn btn-primary ms-2">Buscar</button>
-    <a href="{% url 'portaria_busca' %}" class="btn btn-secondary ms-2">Limpar</a>
+    <div class="col-12 col-md-2">
+      <div class="form-check mt-4">
+        <input class="form-check-input" type="checkbox" id="somente_hoje" name="somente_hoje" {% if somente_hoje == 'on' %}checked{% endif %}>
+        <label class="form-check-label" for="somente_hoje">Somente hoje</label>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label">De</label>
+      <input type="date" class="form-control" name="data_de" value="{{ data_de }}" {% if somente_hoje == 'on' %}disabled{% endif %}>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Até</label>
+      <input type="date" class="form-control" name="data_ate" value="{{ data_ate }}" {% if somente_hoje == 'on' %}disabled{% endif %}>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="" {% if not status %}selected{% endif %}>Todos</option>
+        <option value="LIBERADO" {% if status == "LIBERADO" %}selected{% endif %}>LIBERADO</option>
+        <option value="PENDENTE" {% if status == "PENDENTE" %}selected{% endif %}>PENDENTE</option>
+        <option value="BLOQUEADO" {% if status == "BLOQUEADO" %}selected{% endif %}>BLOQUEADO</option>
+      </select>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary">Buscar</button>
+      <a class="btn btn-outline-secondary" href=".">Limpar</a>
+    </div>
   </form>
 
   {% if resultados %}
-    <table class="table table-striped table-bordered text-center">
-      <thead class="table-dark">
-        <tr>
-          <th>Status</th>
-          <th>Nome</th>
-          <th>Empresa</th>
-          <th>Função</th>
-          <th>Placa</th>
-          <th>Local</th>
-          <th>Início</th>
-          <th>Fim</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in resultados %}
-        <tr class="{% if r.status_final == 'LIBERADO' %}table-success{% elif r.status_final == 'BLOQUEADO' %}table-danger{% else %}table-warning{% endif %}">
-          <td>{{ r.status_final }}</td>
-          <td>{{ r.nome }}</td>
-          <td>{{ r.empresa }}</td>
-          <td>{{ r.funcao }}</td>
-          <td>{{ r.placa }}</td>
-          <td>{{ r.local }}</td>
-          <td>{{ r.data_inicio|date:"d/m/Y" }}</td>
-          <td>{{ r.data_fim|date:"d/m/Y" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="mb-2"><strong>{{ resultados|length }}</strong> resultado(s)</div>
+
+    {% for r in resultados %}
+      <div class="card">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold fs-5">{{ r.nome }}</div>
+              <div class="muted">
+                {{ r.empresa }} • {{ r.funcao }}
+                {% if r.placa %} • Placa: <strong>{{ r.placa }}</strong>{% endif %}
+              </div>
+              <div class="muted">
+                Local: <strong>{{ r.local }}</strong>
+                • Vigência:
+                <span>
+                  {% if r.data_inicio %}{{ r.data_inicio|date:"Y-m-d" }}{% else %}—{% endif %}
+                  &rarr;
+                  {% if r.data_fim %}{{ r.data_fim|date:"Y-m-d" }}{% else %}—{% endif %}
+                </span>
+              </div>
+            </div>
+            <div>
+              <span class="badge badge-status badge-{{ r.status_final }}">{{ r.status_final }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   {% else %}
-    {% if termo %}
-      <p class="text-center text-muted mt-4">Nenhum resultado encontrado para <strong>{{ termo }}</strong>.</p>
-    {% endif %}
+    <div class="alert alert-info">Nenhum resultado. Faça uma busca por CPF, Placa, Nome ou Empresa.</div>
   {% endif %}
 </div>
-{% endblock %}
+
+<script>
+  // Habilita/desabilita datas quando “Somente hoje” é marcado
+  const chk = document.querySelector('#somente_hoje');
+  const d1 = document.querySelector('input[name="data_de"]');
+  const d2 = document.querySelector('input[name="data_ate"]');
+  function toggleDatas() {
+    const on = chk.checked;
+    d1.disabled = on; d2.disabled = on;
+  }
+  chk.addEventListener('change', toggleDatas);
+  toggleDatas();
+</script>
+</body>
+</html>
