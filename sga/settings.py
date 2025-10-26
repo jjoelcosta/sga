@@ -1,6 +1,15 @@
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Autenticação
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/cadastro/"
+
+# Uploads (mídia)
+import os
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 SECRET_KEY = 'django-insecure-)bpg!_30!d@a912_#agxk2+r!-3z*z!v1^-**r2*(&s+l3#t5p'
 

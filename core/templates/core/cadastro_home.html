@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Cadastro{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3 class="mb-3">Módulo de Cadastro</h3>
+  <div class="list-group">
+    <a class="list-group-item list-group-item-action" href="{% url 'empresa_create' %}">Cadastrar Empresa</a>
+    <a class="list-group-item list-group-item-action" href="{% url 'colaborador_create' %}">Cadastrar Colaborador</a>
+    <a class="list-group-item list-group-item-action" href="{% url 'veiculo_create' %}">Cadastrar Veículo</a>
+    <a class="list-group-item list-group-item-action" href="{% url 'atribuicao_create' %}">Cadastrar Atribuição</a>
+    <a class="list-group-item list-group-item-action" href="{% url 'upload_planilha' %}">Upload de Planilha (CSV/XLSX)</a>
+  </div>
+</div>
+{% endblock %}
