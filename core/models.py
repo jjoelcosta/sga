@@ -48,3 +48,23 @@ class Atribuicao(models.Model):
 
     def __str__(self):
         return f"{self.colaborador.nome} - {self.local}"
+    
+class Acesso(models.Model):
+    colaborador = models.ForeignKey("Colaborador", on_delete=models.CASCADE)
+    veiculo = models.ForeignKey("Veiculo", on_delete=models.SET_NULL, null=True, blank=True)
+    local = models.CharField(max_length=100)
+    data_inicio = models.DateTimeField()
+    data_fim = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("LIBERADO", "Liberado"),
+            ("BLOQUEADO", "Bloqueado"),
+            ("PENDENTE", "Pendente"),
+        ],
+        default="PENDENTE",
+    )
+    observacao = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.colaborador.nome} - {self.status}"    

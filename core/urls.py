@@ -1,9 +1,18 @@
 # core/urls.py
 from django.urls import path
 from . import views
-from django.views.generic import RedirectView
 
 urlpatterns = [
-    path("portaria/", views.portaria_busca, name="portaria_busca"),
-    path("", RedirectView.as_view(pattern_name="portaria_busca", permanent=False)),
+    # Raiz serve a tela de busca diretamente, sem RedirectView
+    path("", views.portaria_busca, name="portaria_busca"),
+
+    # Cadastros
+    path("cadastro/", views.cadastro_home, name="cadastro_home"),
+    path("cadastro/empresa/", views.empresa_criar, name="empresa_criar"),
+    path("cadastro/colaborador/", views.colaborador_criar, name="colaborador_criar"),
+    path("cadastro/veiculo/", views.veiculo_criar, name="veiculo_criar"),
+    path("cadastro/acesso/", views.acesso_criar, name="acesso_criar"),
+
+    # Upload em lote
+    path("upload/", views.upload_lotes, name="upload_lotes"),
 ]

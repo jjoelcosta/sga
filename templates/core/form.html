@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-3">{{ titulo }}</h2>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-primary" type="submit">Salvar</button>
+  <a class="btn btn-secondary" href="{% url 'portaria_busca' %}">Voltar</a>
+</form>
+
+<hr>
+<p class="mt-3">
+  Atalhos rápidos:
+  <a href="{% url 'empresa_criar' %}">Empresa</a> |
+  <a href="{% url 'colaborador_criar' %}">Colaborador</a> |
+  <a href="{% url 'veiculo_criar' %}">Veículo</a> |
+  <a href="{% url 'acesso_criar' %}">Acesso</a>
+</p>
+{% endblock %}

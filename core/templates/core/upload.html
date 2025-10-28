@@ -1,36 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Upload de Planilha{% endblock %}
+{% block title %}Upload em Lote{% endblock %}
 {% block content %}
-<div class="container py-4" style="max-width:720px">
-  <h3 class="mb-3">Upload de Planilha</h3>
-
-  {% if messages %}
-    {% for m in messages %}
-      <div class="alert alert-{{ m.tags }}">{{ m }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label">Tipo de dados</label>
-      {{ form.tipo }}
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Arquivo (.csv ou .xlsx)</label>
-      {{ form.arquivo }}
-      <div class="form-text">
-        Padrões esperados:<br>
-        • Empresas: nome, cnpj<br>
-        • Colaboradores: nome, cpf, funcao, empresacnpj<br>
-        • Veículos: placa, cpf<br>
-        • Atribuições: cpf, placa(opcional), status, local, datainicio, datafim
-      </div>
-    </div>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-secondary" href="{% url 'cadastro_home' %}">Voltar</a>
-      <button class="btn btn-primary" type="submit">Enviar</button>
-    </div>
-  </form>
-</div>
+<h1 class="h4 mb-3">Upload em Lote</h1>
+<form method="post" enctype="multipart/form-data" class="card card-body">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-success">Enviar</button>
+</form>
 {% endblock %}

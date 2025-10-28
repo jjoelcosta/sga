@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Cadastro{% endblock %}
+{% block title %}Cadastros{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <h3 class="mb-3">Módulo de Cadastro</h3>
-  <div class="list-group">
-    <a class="list-group-item list-group-item-action" href="{% url 'empresa_create' %}">Cadastrar Empresa</a>
-    <a class="list-group-item list-group-item-action" href="{% url 'colaborador_create' %}">Cadastrar Colaborador</a>
-    <a class="list-group-item list-group-item-action" href="{% url 'veiculo_create' %}">Cadastrar Veículo</a>
-    <a class="list-group-item list-group-item-action" href="{% url 'atribuicao_create' %}">Cadastrar Atribuição</a>
-    <a class="list-group-item list-group-item-action" href="{% url 'upload_planilha' %}">Upload de Planilha (CSV/XLSX)</a>
+<div class="row g-3">
+  <div class="col-12">
+    <h1 class="h4 mb-3">Cadastros</h1>
+    <a class="btn btn-primary me-2 mb-2" href="{% url 'empresa_criar' %}">Empresa</a>
+    <a class="btn btn-primary me-2 mb-2" href="{% url 'colaborador_criar' %}">Colaborador</a>
+    <a class="btn btn-primary me-2 mb-2" href="{% url 'veiculo_criar' %}">Veículo</a>
+    <a class="btn btn-primary me-2 mb-2" href="{% url 'acesso_criar' %}">Atribuição/Acesso</a>
+    <a class="btn btn-outline-secondary mb-2" href="{% url 'upload_lotes' %}">Upload em lote</a>
   </div>
 </div>
 {% endblock %}
