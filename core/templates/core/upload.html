@@ -8,3 +8,7 @@
   <button class="btn btn-success">Enviar</button>
 </form>
 {% endblock %}
+{% if relatorio %}
+  <hr>
+  <pre class="p-3 bg-light border rounded">{{ relatorio }}</pre>
+{% endif %}

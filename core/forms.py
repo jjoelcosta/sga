@@ -53,3 +53,10 @@ class UploadArquivoForm(forms.Form):
     ]
     tipo = forms.ChoiceField(choices=TIPO_CHOICES)
     arquivo = forms.FileField(help_text="CSV ou XLSX")
+
+    def clean_arquivo(self):
+        f = self.cleaned_data["arquivo"]
+        name = f.name.lower()
+        if not (name.endswith(".csv") or name.endswith(".xlsx")):
+            raise forms.ValidationError("Envie um arquivo .csv ou .xlsx.")
+        return f

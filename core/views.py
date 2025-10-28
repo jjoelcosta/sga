@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.shortcuts import render, redirect
+from . import importers
 
 from .forms import (
     EmpresaForm,
@@ -138,14 +139,36 @@ def cadastro_home(request):
 @login_required
 def upload_lotes(request):
     """
-    Apenas exibe o formulário por enquanto.
-    A lógica de processar arquivos vem depois.
+    Processa CSV ou XLSX e importa para o banco.
     """
+    relatorio = None
+
     if request.method == "POST":
         form = UploadArquivoForm(request.POST, request.FILES)
         if form.is_valid():
-            messages.success(request, "Arquivo recebido com sucesso.")
-            return redirect("upload_lotes")
+            tipo = form.cleaned_data["tipo"]
+            arquivo = form.cleaned_data["arquivo"]
+
+            try:
+                if tipo == "empresa":
+                    ok, erros = importers.importar_empresas(arquivo)
+                elif tipo == "colaborador":
+                    ok, erros = importers.importar_colaboradores(arquivo)
+                elif tipo == "veiculo":
+                    ok, erros = importers.importar_veiculos(arquivo)
+                elif tipo == "atribuicao":
+                    ok, erros = importers.importar_atribuicoes(arquivo)
+                else:
+                    raise ValueError("Tipo inválido.")
+
+                linhas_erros = "\n".join(erros[:50]) if erros else "Sem erros."
+                relatorio = f"Importação concluída.\nRegistros OK: {ok}\nErros: {len(erros)}\n\n{linhas_erros}"
+                messages.success(request, f"Importação finalizada, OK: {ok}, Erros: {len(erros)}.")
+            except Exception as e:
+                messages.error(request, f"Falha ao importar, {e}")
+        else:
+            messages.error(request, "Formulário inválido, verifique o arquivo e o tipo selecionado.")
     else:
         form = UploadArquivoForm()
-    return render(request, "core/upload.html", {"form": form})
+
+    return render(request, "core/upload.html", {"form": form, "relatorio": relatorio})
