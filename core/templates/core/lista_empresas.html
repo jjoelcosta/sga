@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Empresas{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Empresas</h1>
+
+<form class="row g-2 mb-3">
+  <div class="col-auto">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nome, CNPJ, responsável">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-primary">Buscar</button>
+  </div>
+  <div class="col-auto ms-auto">
+    {% if perms.core.add_empresa %}
+      <a class="btn btn-success" href="{% url 'empresa_criar' %}">Nova Empresa</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nome</th><th>CNPJ</th><th>Responsável</th><th>Telefone</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in page_obj %}
+      <tr>
+        <td>{{ e.nome }}</td>
+        <td>{{ e.cnpj }}</td>
+        <td>{{ e.responsavel|default:"" }}</td>
+        <td>{{ e.telefone|default:"" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">Nenhum registro encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav>
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ page_obj.previous_page_number }}">Anterior</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ page_obj.next_page_number }}">Próxima</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Próxima</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endblock %}

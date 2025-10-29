@@ -15,4 +15,10 @@ urlpatterns = [
 
     # Upload em lote
     path("upload/", views.upload_lotes, name="upload_lotes"),
+
+    # Listagens
+    path("lista/empresas/", views.empresa_listar, name="empresa_listar"),
+    path("lista/colaboradores/", views.colaborador_listar, name="colaborador_listar"),
+    path("lista/veiculos/", views.veiculo_listar, name="veiculo_listar"),
+
 ]

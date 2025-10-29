@@ -68,3 +68,21 @@ class Acesso(models.Model):
 
     def __str__(self):
         return f"{self.colaborador.nome} - {self.status}"    
+
+class LoteImportacao(models.Model):
+    TIPOS = [
+        ("empresa", "Empresas"),
+        ("colaborador", "Colaboradores"),
+        ("veiculo", "Veículos"),
+        ("atribuicao", "Atribuições"),
+    ]
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    arquivo_nome = models.CharField(max_length=255)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    ok = models.BooleanField(default=False)
+    total_processado = models.IntegerField(default=0)
+    total_erros = models.IntegerField(default=0)
+    log = models.TextField(blank=True, null=True)
+
+    def _str_(self):
+        return f"{self.get_tipo_display()} • {self.arquivo_nome} • {self.criado_em:%d/%m/%Y %H:%M}"

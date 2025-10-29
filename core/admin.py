@@ -1,5 +1,12 @@
 from django.contrib import admin
 from .models import Empresa, Colaborador, Veiculo, Atribuicao  # ajuste aqui se for "Acesso" em vez de "Atribuicao"
+from .models import LoteImportacao
+
+@admin.register(LoteImportacao)
+class LoteImportacaoAdmin(admin.ModelAdmin):
+    list_display = ("tipo", "arquivo_nome", "criado_em", "ok", "total_processado", "total_erros")
+    list_filter = ("tipo", "ok", "criado_em")
+    search_fields = ("arquivo_nome", "log")
 
 # -------- Empresa --------
 @admin.register(Empresa)

@@ -7,6 +7,48 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.shortcuts import render, redirect
 from . import importers
+from django.core.paginator import Paginator
+
+@login_required
+def empresa_listar(request):
+    q = request.GET.get("q", "").strip()
+    qs = Empresa.objects.all().order_by("nome")
+    if q:
+        qs = qs.filter(
+            Q(nome__icontains=q) | Q(cnpj__icontains=q) | Q(responsavel__icontains=q)
+        )
+    paginator = Paginator(qs, 20)
+    page = request.GET.get("page")
+    page_obj = paginator.get_page(page)
+    return render(request, "core/lista_empresas.html", {"page_obj": page_obj, "q": q})
+
+@login_required
+def colaborador_listar(request):
+    q = request.GET.get("q", "").strip()
+    qs = Colaborador.objects.select_related("empresa").all().order_by("nome")
+    if q:
+        qs = qs.filter(
+            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(funcao__icontains=q) | Q(empresa__nome__icontains=q)
+        )
+    paginator = Paginator(qs, 20)
+    page = request.GET.get("page")
+    page_obj = paginator.get_page(page)
+    return render(request, "core/lista_colaboradores.html", {"page_obj": page_obj, "q": q})
+
+@login_required
+def veiculo_listar(request):
+    q = request.GET.get("q", "").strip()
+    qs = Veiculo.objects.select_related("colaborador", "colaborador__empresa").all().order_by("placa")
+    if q:
+        qs = qs.filter(
+            Q(placa__icontains=q) | Q(modelo__icontains=q) | Q(marca__icontains=q) |
+            Q(colaborador__nome__icontains=q) | Q(colaborador__empresa__nome__icontains=q)
+        )
+    paginator = Paginator(qs, 20)
+    page = request.GET.get("page")
+    page_obj = paginator.get_page(page)
+    return render(request, "core/lista_veiculos.html", {"page_obj": page_obj, "q": q})
+
 
 from .forms import (
     EmpresaForm,
@@ -54,8 +96,7 @@ def portaria_busca(request):
             qs = qs.filter(colaborador__cpf=cpf)
         else:
             qs = qs.filter(
-                Q(colaborador_nome_icontains=termo) |
-                Q(colaborador_empresanome_icontains=termo)
+                Q(colaborador_nomeicontains=termo) | Q(colaboradorempresanome_icontains=termo)
             )
 
         for a in qs[:200]:
@@ -139,36 +180,68 @@ def cadastro_home(request):
 @login_required
 def upload_lotes(request):
     """
-    Processa CSV ou XLSX e importa para o banco.
+    Recebe CSV ou XLSX, chama o importador, cria registro no histórico
+    e mostra mensagem com o resumo.
     """
-    relatorio = None
-
     if request.method == "POST":
         form = UploadArquivoForm(request.POST, request.FILES)
         if form.is_valid():
             tipo = form.cleaned_data["tipo"]
-            arquivo = form.cleaned_data["arquivo"]
+            f = form.cleaned_data["arquivo"]
 
+            # salva histórico parcial
+            from .models import LoteImportacao
+            hist = LoteImportacao.objects.create(
+                tipo=tipo,
+                arquivo_nome=f.name,
+                ok=False,
+                total_processado=0,
+                total_erros=0,
+                log="Recebido para processamento.",
+            )
+
+            # chama o importador
             try:
-                if tipo == "empresa":
-                    ok, erros = importers.importar_empresas(arquivo)
-                elif tipo == "colaborador":
-                    ok, erros = importers.importar_colaboradores(arquivo)
-                elif tipo == "veiculo":
-                    ok, erros = importers.importar_veiculos(arquivo)
-                elif tipo == "atribuicao":
-                    ok, erros = importers.importar_atribuicoes(arquivo)
+                from . import importers  # core/importers.py
+                resumo = importers.importar_arquivo(file_obj=f, tipo=tipo)
+                # esperado um dicionário como:
+                # {"ok": True/False, "criados_ou_atualizados": N, "erros": ["msg1","msg2", ...]}
+                ok = bool(resumo.get("ok"))
+                total = int(resumo.get("criados_ou_atualizados", 0))
+                erros = resumo.get("erros", [])
+                hist.ok = ok
+                hist.total_processado = total
+                hist.total_erros = len(erros)
+                if erros:
+                    hist.log = "\n".join(erros[:50])
                 else:
-                    raise ValueError("Tipo inválido.")
+                    hist.log = "Processado sem erros."
+                hist.save()
 
-                linhas_erros = "\n".join(erros[:50]) if erros else "Sem erros."
-                relatorio = f"Importação concluída.\nRegistros OK: {ok}\nErros: {len(erros)}\n\n{linhas_erros}"
-                messages.success(request, f"Importação finalizada, OK: {ok}, Erros: {len(erros)}.")
+                if ok:
+                    messages.success(
+                        request,
+                        f"Upload processado com sucesso, {total} registros afetados."
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f"Upload processado com avisos, {total} registros afetados, {len(erros)} erros."
+                    )
             except Exception as e:
-                messages.error(request, f"Falha ao importar, {e}")
-        else:
-            messages.error(request, "Formulário inválido, verifique o arquivo e o tipo selecionado.")
+                # registra falha
+                hist.ok = False
+                hist.total_processado = 0
+                hist.total_erros = 1
+                hist.log = f"Falha ao processar, {e}"
+                hist.save()
+                messages.error(request, f"Falha no processamento, {e}")
+
+            return redirect("upload_lotes")
     else:
         form = UploadArquivoForm()
 
-    return render(request, "core/upload.html", {"form": form, "relatorio": relatorio})
+    # lista últimos uploads no rodapé
+    from .models import LoteImportacao
+    ultimos = LoteImportacao.objects.order_by("-criado_em")[:10]
+    return render(request, "core/upload.html", {"form": form, "uploads": ultimos})

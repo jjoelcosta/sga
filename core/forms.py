@@ -57,6 +57,20 @@ class UploadArquivoForm(forms.Form):
     def clean_arquivo(self):
         f = self.cleaned_data["arquivo"]
         name = f.name.lower()
+
+        # Verifica extensão
         if not (name.endswith(".csv") or name.endswith(".xlsx")):
             raise forms.ValidationError("Envie um arquivo .csv ou .xlsx.")
+
+        # Verifica tamanho máximo (ex: 5 MB)
+        if f.size > 5 * 1024 * 1024:
+            raise forms.ValidationError("O arquivo deve ter no máximo 5 MB.")
+
+        # Verifica tipo MIME (CSV ou XLSX)
+        if not f.content_type in [
+            "text/csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ]:
+            raise forms.ValidationError("Formato de arquivo inválido.")
+
         return f

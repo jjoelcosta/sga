@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Veículos{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Veículos</h1>
+
+<form class="row g-2 mb-3">
+  <div class="col-auto">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por placa, marca, modelo, colaborador, empresa">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-primary">Buscar</button>
+  </div>
+  <div class="col-auto ms-auto">
+    {% if perms.core.add_veiculo %}
+      <a class="btn btn-success" href="{% url 'veiculo_criar' %}">Novo Veículo</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Placa</th><th>Marca</th><th>Modelo</th><th>Cor</th><th>Colaborador</th><th>Empresa</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in page_obj %}
+      <tr>
+        <td>{{ v.placa }}</td>
+        <td>{{ v.marca|default:"" }}</td>
+        <td>{{ v.modelo|default:"" }}</td>
+        <td>{{ v.cor|default:"" }}</td>
+        <td>{{ v.colaborador.nome if v.colaborador }}</td>
+        <td>{{ v.colaborador.empresa.nome if v.colaborador and v.colaborador.empresa }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">Nenhum registro encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "core/_paginacao.html" with page_obj=page_obj q=q %}
+{% endblock %}

@@ -1,14 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Cadastros{% endblock %}
 {% block content %}
-<div class="row g-3">
-  <div class="col-12">
-    <h1 class="h4 mb-3">Cadastros</h1>
-    <a class="btn btn-primary me-2 mb-2" href="{% url 'empresa_criar' %}">Empresa</a>
-    <a class="btn btn-primary me-2 mb-2" href="{% url 'colaborador_criar' %}">Colaborador</a>
-    <a class="btn btn-primary me-2 mb-2" href="{% url 'veiculo_criar' %}">Veículo</a>
-    <a class="btn btn-primary me-2 mb-2" href="{% url 'acesso_criar' %}">Atribuição/Acesso</a>
-    <a class="btn btn-outline-secondary mb-2" href="{% url 'upload_lotes' %}">Upload em lote</a>
-  </div>
+<h1 class="h4 mb-3">Cadastros</h1>
+
+<div class="mt-3">
+  <a class="btn btn-outline-secondary me-2 mb-2" href="{% url 'empresa_listar' %}">Listar Empresas</a>
+  <a class="btn btn-outline-secondary me-2 mb-2" href="{% url 'colaborador_listar' %}">Listar Colaboradores</a>
+  <a class="btn btn-outline-secondary me-2 mb-2" href="{% url 'veiculo_listar' %}">Listar Veículos</a>
 </div>
+
+
+{% if perms.core.add_empresa %}
+  <a class="btn btn-primary me-2 mb-2" href="{% url 'empresa_criar' %}">Empresa</a>
+{% endif %}
+
+{% if perms.core.add_colaborador %}
+  <a class="btn btn-primary me-2 mb-2" href="{% url 'colaborador_criar' %}">Colaborador</a>
+{% endif %}
+
+{% if perms.core.add_veiculo %}
+  <a class="btn btn-primary me-2 mb-2" href="{% url 'veiculo_criar' %}">Veículo</a>
+{% endif %}
+
+{% if perms.core.add_atribuicao %}
+  <a class="btn btn-primary me-2 mb-2" href="{% url 'acesso_criar' %}">Atribuição</a>
+{% endif %}
+
+{% if user.is_staff %}
+  <a class="btn btn-outline-secondary mb-2" href="{% url 'upload_lotes' %}">Upload em lote</a>
+{% endif %}
 {% endblock %}
