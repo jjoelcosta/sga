@@ -33,5 +33,10 @@ class Command(BaseCommand):
                     updated += 1
                 except Exception as e:
                     errors += 1
+<<<<<<< HEAD
                     self.stderr.write(f"Erro ao atualizar id={obj.pk}: {e}")
         self.stdout.write(f"Total: {total} — Atualizados: {updated} — Erros: {errors}")
+=======
+                    self.stderr.write(f"Erro ao atualizar id={{obj.pk}}: {{e}}")
+        self.stdout.write(f"Total: {{total}} — Atualizados: {{updated}} — Erros: {{errors}}")
+>>>>>>> improve/models-audit-timestamps
