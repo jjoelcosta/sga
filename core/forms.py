@@ -1,6 +1,13 @@
 from django import forms
+from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from .models import Empresa, Colaborador, Veiculo, Acesso
 import re
+
+
+def _only_digits(value: str) -> str:
+    return re.sub(r"\D", "", value or "")
+
 
 class EmpresaForm(forms.ModelForm):
     class Meta:
@@ -8,9 +15,9 @@ class EmpresaForm(forms.ModelForm):
         fields = ["cnpj", "nome", "responsavel", "telefone"]
 
     def clean_cnpj(self):
-        cnpj = re.sub(r"\D", "", self.cleaned_data.get("cnpj", ""))
+        cnpj = _only_digits(self.cleaned_data.get("cnpj", ""))
         if len(cnpj) != 14:
-            raise forms.ValidationError("CNPJ deve ter 14 dígitos.")
+            raise forms.ValidationError("CNPJ deve ter 14 dígitos (somente números).")
         return cnpj
 
 
@@ -20,9 +27,9 @@ class ColaboradorForm(forms.ModelForm):
         fields = ["cpf", "nome", "funcao", "empresa"]
 
     def clean_cpf(self):
-        cpf = re.sub(r"\D", "", self.cleaned_data.get("cpf", ""))
+        cpf = _only_digits(self.cleaned_data.get("cpf", ""))
         if len(cpf) != 11:
-            raise forms.ValidationError("CPF deve ter 11 dígitos.")
+            raise forms.ValidationError("CPF deve ter 11 dígitos (somente números).")
         return cpf
 
 
@@ -32,9 +39,11 @@ class VeiculoForm(forms.ModelForm):
         fields = ["placa", "marca", "modelo", "cor", "colaborador"]
 
     def clean_placa(self):
-        placa = re.sub(r"[^A-Za-z0-9]", "", self.cleaned_data.get("placa", "")).upper()
+        placa_raw = self.cleaned_data.get("placa", "") or ""
+        placa = re.sub(r"[^A-Za-z0-9]", "", placa_raw).upper()
+        # placas brasileiras atuais têm 7 caracteres; alguns sistemas usam 8 (ex.: mercosul com hífen removido)
         if not (7 <= len(placa) <= 8):
-            raise forms.ValidationError("Placa deve ter 7 ou 8 caracteres.")
+            raise forms.ValidationError("Placa deve ter 7 ou 8 caracteres alfanuméricos.")
         return placa
 
 
@@ -52,25 +61,20 @@ class UploadArquivoForm(forms.Form):
         ("atribuicao", "Atribuições"),
     ]
     tipo = forms.ChoiceField(choices=TIPO_CHOICES)
-    arquivo = forms.FileField(help_text="CSV ou XLSX")
+    arquivo = forms.FileField(
+        help_text="CSV ou XLSX",
+        validators=[FileExtensionValidator(allowed_extensions=["csv", "xlsx"])],
+    )
 
     def clean_arquivo(self):
         f = self.cleaned_data["arquivo"]
         name = f.name.lower()
 
-        # Verifica extensão
-        if not (name.endswith(".csv") or name.endswith(".xlsx")):
-            raise forms.ValidationError("Envie um arquivo .csv ou .xlsx.")
+        # Verifica extensão via validator acima; aqui só reforçamos o tamanho/segurança
+        max_size = getattr(settings, "MAX_UPLOAD_SIZE", 5 * 1024 * 1024)  # 5 MB por padrão
+        if f.size > max_size:
+            raise forms.ValidationError(f"O arquivo deve ter no máximo {max_size // (1024 * 1024)} MB.")
 
-        # Verifica tamanho máximo (ex: 5 MB)
-        if f.size > 5 * 1024 * 1024:
-            raise forms.ValidationError("O arquivo deve ter no máximo 5 MB.")
-
-        # Verifica tipo MIME (CSV ou XLSX)
-        if not f.content_type in [
-            "text/csv",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ]:
-            raise forms.ValidationError("Formato de arquivo inválido.")
-
+        # Não confiar unicamente no content_type: alguns navegadores mudam o valor.
+        # Se for necessário maior robustez, inspecione o cabeçalho inicial (magic bytes) aqui.
         return f

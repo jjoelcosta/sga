@@ -1,54 +1,14 @@
 # core/views.py
 import re
 from datetime import date
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.shortcuts import render, redirect
-from . import importers
 from django.core.paginator import Paginator
-
-@login_required
-def empresa_listar(request):
-    q = request.GET.get("q", "").strip()
-    qs = Empresa.objects.all().order_by("nome")
-    if q:
-        qs = qs.filter(
-            Q(nome__icontains=q) | Q(cnpj__icontains=q) | Q(responsavel__icontains=q)
-        )
-    paginator = Paginator(qs, 20)
-    page = request.GET.get("page")
-    page_obj = paginator.get_page(page)
-    return render(request, "core/lista_empresas.html", {"page_obj": page_obj, "q": q})
-
-@login_required
-def colaborador_listar(request):
-    q = request.GET.get("q", "").strip()
-    qs = Colaborador.objects.select_related("empresa").all().order_by("nome")
-    if q:
-        qs = qs.filter(
-            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(funcao__icontains=q) | Q(empresa__nome__icontains=q)
-        )
-    paginator = Paginator(qs, 20)
-    page = request.GET.get("page")
-    page_obj = paginator.get_page(page)
-    return render(request, "core/lista_colaboradores.html", {"page_obj": page_obj, "q": q})
-
-@login_required
-def veiculo_listar(request):
-    q = request.GET.get("q", "").strip()
-    qs = Veiculo.objects.select_related("colaborador", "colaborador__empresa").all().order_by("placa")
-    if q:
-        qs = qs.filter(
-            Q(placa__icontains=q) | Q(modelo__icontains=q) | Q(marca__icontains=q) |
-            Q(colaborador__nome__icontains=q) | Q(colaborador__empresa__nome__icontains=q)
-        )
-    paginator = Paginator(qs, 20)
-    page = request.GET.get("page")
-    page_obj = paginator.get_page(page)
-    return render(request, "core/lista_veiculos.html", {"page_obj": page_obj, "q": q})
-
+from django.conf import settings
 
 from .forms import (
     EmpresaForm,
@@ -57,7 +17,10 @@ from .forms import (
     AcessoForm,
     UploadArquivoForm,
 )
-from .models import Empresa, Colaborador, Veiculo, Atribuicao, Acesso
+from .models import Empresa, Colaborador, Veiculo, Atribuicao, Acesso, LoteImportacao
+from . import importers
+
+logger = logging.getLogger(__name__)
 
 
 def _limpa_cpf(termo: str):
@@ -72,6 +35,7 @@ def _limpa_placa(termo: str):
     return placa if 7 <= len(placa) <= 8 else None
 
 
+@login_required
 def portaria_busca(request):
     """
     Tela principal, busca por nome, empresa, CPF ou placa.
@@ -85,9 +49,7 @@ def portaria_busca(request):
         placa = _limpa_placa(termo)
 
         qs = (
-            Atribuicao.objects
-            .select_related("colaborador", "veiculo", "colaborador__empresa")
-            .order_by("-data_inicio")
+            Atribuicao.objects.select_related("colaborador", "veiculo", "colaborador__empresa").order_by("-data_inicio")
         )
 
         if placa:
@@ -96,13 +58,13 @@ def portaria_busca(request):
             qs = qs.filter(colaborador__cpf=cpf)
         else:
             qs = qs.filter(
-                Q(colaborador_nomeicontains=termo) | Q(colaboradorempresanome_icontains=termo)
+                Q(colaborador__nome__icontains=termo) | Q(colaborador__empresa__nome__icontains=termo)
             )
 
+        # limitar resultado e calcular estado final
         for a in qs[:200]:
             dentro_janela = (
-                (a.data_inicio is None or a.data_inicio <= hoje)
-                and (a.data_fim is None or a.data_fim >= hoje)
+                (a.data_inicio is None or a.data_inicio <= hoje) and (a.data_fim is None or a.data_fim >= hoje)
             )
             if a.status == "LIBERADO" and dentro_janela:
                 status_final = "LIBERADO"
@@ -111,16 +73,18 @@ def portaria_busca(request):
             else:
                 status_final = "PENDENTE"
 
-            resultados.append({
-                "status_final": status_final,
-                "nome": a.colaborador.nome,
-                "empresa": a.colaborador.empresa.nome if a.colaborador.empresa else "",
-                "funcao": a.colaborador.funcao or "",
-                "placa": a.veiculo.placa if a.veiculo else "",
-                "local": a.local or "",
-                "data_inicio": a.data_inicio,
-                "data_fim": a.data_fim,
-            })
+            resultados.append(
+                {
+                    "status_final": status_final,
+                    "nome": a.colaborador.nome,
+                    "empresa": a.colaborador.empresa.nome if a.colaborador.empresa else "",
+                    "funcao": a.colaborador.funcao or "",
+                    "placa": a.veiculo.placa if a.veiculo else "",
+                    "local": a.local or "",
+                    "data_inicio": a.data_inicio,
+                    "data_fim": a.data_fim,
+                }
+            )
 
     return render(request, "core/portaria_busca.html", {"termo": termo, "resultados": resultados})
 
@@ -178,6 +142,7 @@ def cadastro_home(request):
 
 # ---------- Upload em lote ----------
 @login_required
+@permission_required("core.add_loteimportacao", raise_exception=True)
 def upload_lotes(request):
     """
     Recebe CSV ou XLSX, chama o importador, cria registro no histórico
@@ -190,58 +155,43 @@ def upload_lotes(request):
             f = form.cleaned_data["arquivo"]
 
             # salva histórico parcial
-            from .models import LoteImportacao
             hist = LoteImportacao.objects.create(
                 tipo=tipo,
                 arquivo_nome=f.name,
                 ok=False,
                 total_processado=0,
                 total_erros=0,
-                log="Recebido para processamento.",
+                log=json.dumps({"status": "recebido"}),
             )
 
-            # chama o importador
             try:
-                from . import importers  # core/importers.py
                 resumo = importers.importar_arquivo(file_obj=f, tipo=tipo)
-                # esperado um dicionário como:
-                # {"ok": True/False, "criados_ou_atualizados": N, "erros": ["msg1","msg2", ...]}
                 ok = bool(resumo.get("ok"))
                 total = int(resumo.get("criados_ou_atualizados", 0))
                 erros = resumo.get("erros", [])
                 hist.ok = ok
                 hist.total_processado = total
                 hist.total_erros = len(erros)
-                if erros:
-                    hist.log = "\n".join(erros[:50])
-                else:
-                    hist.log = "Processado sem erros."
+                hist.log = resumo  # JSONField ou texto; o model suporta JSONField conforme revisão
                 hist.save()
 
                 if ok:
-                    messages.success(
-                        request,
-                        f"Upload processado com sucesso, {total} registros afetados."
-                    )
+                    messages.success(request, f"Upload processado com sucesso, {total} registros afetados.")
                 else:
-                    messages.warning(
-                        request,
-                        f"Upload processado com avisos, {total} registros afetados, {len(erros)} erros."
-                    )
+                    messages.warning(request, f"Upload processado com avisos/erros, {total} registros, {len(erros)} erros.")
+
             except Exception as e:
-                # registra falha
+                logger.exception("Falha ao processar upload em lote")
                 hist.ok = False
                 hist.total_processado = 0
                 hist.total_erros = 1
-                hist.log = f"Falha ao processar, {e}"
+                hist.log = {"erro": str(e)}
                 hist.save()
-                messages.error(request, f"Falha no processamento, {e}")
+                messages.error(request, f"Falha no processamento: {e}")
 
             return redirect("upload_lotes")
     else:
         form = UploadArquivoForm()
 
-    # lista últimos uploads no rodapé
-    from .models import LoteImportacao
     ultimos = LoteImportacao.objects.order_by("-criado_em")[:10]
     return render(request, "core/upload.html", {"form": form, "uploads": ultimos})

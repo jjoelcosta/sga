@@ -1,5 +1,5 @@
 asgiref==3.8.1
-backports.zoneinfo==0.2.1
+# backports.zoneinfo==0.2.1  # não necessário em Python 3.9+
 django==4.2.25
 et-xmlfile==2.0.0
 numpy==1.24.4
